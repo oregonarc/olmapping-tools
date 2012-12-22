@@ -1,9 +1,10 @@
-OpenLayers.ImgPath = "media/js/theme/default/img/";
+OpenLayers.ImgPath = "img/";
 
 window.OLMap = {}
 
 OLMap.proj = new OpenLayers.Projection("EPSG:4326");
 OLMap.map = null;
+OLMap.fullscreen = false;
 
 var useLocalTiles = false;
 if (useLocalTiles) {
@@ -84,48 +85,60 @@ OLMap.trackLayer = new OpenLayers.Layer.Vector("Tracks",{
         rendererOptions: {zIndexing: true}
 });
 
-// OLMap.cacheWrite = new OpenLayers.Control.CacheWrite({
-//     autoActivate: true,
-//     imageFormat: "image/png",
-//     eventListeners: {
-//         cachefull: function() { status.innerHTML = "Cache full."; }
-//     }
-// });
-// OLMap.cacheRead = new OpenLayers.Control.CacheRead({
-//     fetchEvent: "tileerror"
-// });
-
 /**************************************************************************************************/
 
 OLMap.init = function(options) {
-    fixMapSize();
+    if (this.fullscreen) fixMapSize();
     
     console.log("Map loaded. "+(useLocalTiles?"Using local tiles.":"Using web tiles."));
-
-    this.map = new OpenLayers.Map("map",
-        {maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34),
+    
+    // Make Layers, use Google Maps if available
+    var layers = [];
+                      
+    try{
+        layers.push(new OpenLayers.Layer.Google(
+            "Google Physical",
+            {type: google.maps.MapTypeId.TERRAIN}
+        ));
+        
+        layers.push(new OpenLayers.Layer.Google(
+            "Google Streets", // the default
+            {numZoomLevels: 20}
+        ));
+        layer.push(new OpenLayers.Layer.Google(
+            "Google Hybrid",
+            {type: google.maps.MapTypeId.HYBRID, numZoomLevels: 20}
+        ));
+        layers.push(new OpenLayers.Layer.Google(
+            "Google Satellite",
+            {type: google.maps.MapTypeId.SATELLITE, numZoomLevels: 22}
+        ));       
+    
+    } catch (er){}
+    
+    layers.push(
+         new OpenLayers.Layer.TMS(
+        "NOAA RNC Charts",
+        "http://media.oregonarc.com/RNC_CHARTS/",
+        {'type':'.png', 
+         'getURL':this.get_my_url,
+         'eventListeners': { tileloaded: updateStatus },} 
+        )
+    );
+    
+    this.map = new OpenLayers.Map("map",{
+        maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34),
         numZoomLevels:16,
         maxResolution:156543.0339,
         units:'m',
         projection: "EPSG:900913",
-        displayProjection: new OpenLayers.Projection("EPSG:4326")}
-    );
-    
-    window.tms = new OpenLayers.Layer.TMS(
-       "NOAA RNC Charts",
-       "http://media.oregonarc.com/RNC_CHARTS/",
-       {'type':'.png', 
-        'getURL':this.get_my_url,
-        'eventListeners': { tileloaded: updateStatus },
-       } 
-    );
-    
-    this.map.addLayer(tms);
-    this.map.setBaseLayer(tms);
+        displayProjection: new OpenLayers.Projection("EPSG:4326"),
+        layers:layers,
+    });
+       
     this.setCenter(this.cl[0], this.cl[1], 8);
-    
-//     this.map.addControl(this.cacheWrite);
-//     this.map.addControl(this.cacheRead);        
+    this.map.addControl(new OpenLayers.Control.LayerSwitcher());
+       
 };
 
 function fixMapSize() {
@@ -184,20 +197,20 @@ OLMap.plot_cl = function (){
     if (!this.clMarker){
       //this.clMarkers = new OpenLayers.Layer.Markers( "Current Location" );
 	    this.clMarkers = new OpenLayers.Layer.Vector("Current Location",
-                {
-                    styleMap: new OpenLayers.StyleMap({
-                        "default": {
-                            externalGraphic: this.clMarker_icon,
-                            graphicWidth: 40,
-                            graphicHeight: 40,
-                            graphicYOffset: -40/2,
-                            //graphicXOffset: 30/2,
-                            rotation: "${angle}",
-                            
-                        },
-                        
-                    })
-                });
+	        {
+	            styleMap: new OpenLayers.StyleMap({
+	                "default": {
+	                    externalGraphic: this.clMarker_icon,
+	                    graphicWidth: 40,
+	                    graphicHeight: 40,
+	                    graphicYOffset: -40/2,
+	                    //graphicXOffset: 30/2,
+	                    rotation: "${angle}",
+	                    
+	                },
+	                
+	            })
+	        });
 
 	    this.map.addLayer(this.clMarkers);  
     } else {
@@ -245,14 +258,7 @@ OLMap.plot_waypoints = function(points){
         var geometry = feature.geometry;
         geometry.transform(this.proj, this.map.getProjectionObject());
         this.waypointLayer.addFeatures(feature);
-        
-        // This  does not work yet
-//         var popup = new OpenLayers.Popup("Not sure what this does",
-//                              point.lonLat,
-//                              null,
-//                             points[i]['name'],
-//                              true);
-                
+               
     }
     this.map.addLayer(this.waypointLayer);
     this.setZIndices();
@@ -448,20 +454,6 @@ OLMap.setZIndices = function() {
 
 
 /************** HELPER FUNCTIONS (THESE BELONG IN A VIEW) *****************/
-function cache_btn_callback(that) {
-    
-    if ($(that).hasClass("write")) {
-        $(that).removeClass("write");
-        OLMap.read_cache_mode();
-        $(that).addClass("read");
-        $(that).text("Reading Cache");
-    } else {
-        $(that).removeClass("read");
-        OLMap.write_cache_mode();
-        $(that).addClass("write");
-        $(that).text("Writing Cache");
-    }
-}
 
 // update the number of cache hits and detect missing CORS support
 function updateStatus() {
