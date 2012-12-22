@@ -1,5 +1,3 @@
-OpenLayers.ImgPath = "img/";
-
 window.OLMap = {}
 
 OLMap.proj = new OpenLayers.Projection("EPSG:4326");
@@ -89,7 +87,7 @@ OLMap.trackLayer = new OpenLayers.Layer.Vector("Tracks",{
 /**************************************************************************************************/
 
 OLMap.init = function(options) {
-    fixMapSize();
+    this.fixMapSize();
     
     console.log("Map loaded. "+(useLocalTiles?"Using local tiles.":"Using web tiles."));
     
@@ -101,7 +99,6 @@ OLMap.init = function(options) {
             "Google Physical",
             {type: google.maps.MapTypeId.TERRAIN}
         ));
-        
         layers.push(new OpenLayers.Layer.Google(
             "Google Streets", // the default
             {numZoomLevels: 20}
@@ -123,13 +120,14 @@ OLMap.init = function(options) {
         "http://media.oregonarc.com/RNC_CHARTS/",
         {'type':'.png', 
          'getURL':this.get_my_url,
-         'eventListeners': { tileloaded: updateStatus },} 
+         'eventListeners': { tileloaded: updateStatus },
+          numZoomLevels:16,
+         } 
         )
     );
     
     this.map = new OpenLayers.Map("map",{
         maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34),
-        numZoomLevels:16,
         maxResolution:156543.0339,
         units:'m',
         projection: "EPSG:900913",
@@ -139,11 +137,14 @@ OLMap.init = function(options) {
        
     this.setCenter(this.cl[0], this.cl[1], 8);
     this.map.addControl(new OpenLayers.Control.LayerSwitcher());
+    this.map.addControl(new OpenLayers.Control.ScaleLine());
+    this.map.addControl(new OpenLayers.Control.MousePosition());
+       
        
 };
 
-function fixMapSize() {
-    if (this.fullwidth) $("#map").width(window.innerWidth - 2);
+OLMap.fixMapSize = function() {
+    if (this.fullwidth) $("#map").width(window.innerWidth - 40);
     if (this.fullheight) $("#map").height(window.innerHeight - 2);
 }
 
@@ -197,23 +198,23 @@ OLMap.plot_cl = function (){
     
     if (!this.clMarker){
       //this.clMarkers = new OpenLayers.Layer.Markers( "Current Location" );
-	    this.clMarkers = new OpenLayers.Layer.Vector("Current Location",
-	        {
-	            styleMap: new OpenLayers.StyleMap({
-	                "default": {
-	                    externalGraphic: this.clMarker_icon,
-	                    graphicWidth: 40,
-	                    graphicHeight: 40,
-	                    graphicYOffset: -40/2,
-	                    //graphicXOffset: 30/2,
-	                    rotation: "${angle}",
-	                    
-	                },
-	                
-	            })
-	        });
+        this.clMarkers = new OpenLayers.Layer.Vector("Current Location",
+            {
+                styleMap: new OpenLayers.StyleMap({
+                    "default": {
+                        externalGraphic: this.clMarker_icon,
+                        graphicWidth: 40,
+                        graphicHeight: 40,
+                        graphicYOffset: -40/2,
+                        //graphicXOffset: 30/2,
+                        rotation: "${angle}",
+                        
+                    },
+                    
+                })
+            });
 
-	    this.map.addLayer(this.clMarkers);  
+        this.map.addLayer(this.clMarkers);  
     } else {
         this.clMarkers.removeFeatures(this.clMarker);
     }
@@ -303,7 +304,7 @@ OLMap.plot_active_track = function(track){
     geometry.transform(this.proj, this.map.getProjectionObject());
     this.activeTrackLayer.addFeatures(feature);
     
-	if (track.geom.length > 0) this.plot_firstPoint(track, this.activeTrackLayer);
+    if (track.geom.length > 0) this.plot_firstPoint(track, this.activeTrackLayer);
     
     //add it to the map 
     this.map.addLayer(this.activeTrackLayer);
