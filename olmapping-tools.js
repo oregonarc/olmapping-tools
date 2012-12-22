@@ -4,7 +4,8 @@ window.OLMap = {}
 
 OLMap.proj = new OpenLayers.Projection("EPSG:4326");
 OLMap.map = null;
-OLMap.fullscreen = false;
+OLMap.fullwidth = true;
+OLMap.fullheight = false;
 
 var useLocalTiles = false;
 if (useLocalTiles) {
@@ -88,7 +89,7 @@ OLMap.trackLayer = new OpenLayers.Layer.Vector("Tracks",{
 /**************************************************************************************************/
 
 OLMap.init = function(options) {
-    if (this.fullscreen) fixMapSize();
+    fixMapSize();
     
     console.log("Map loaded. "+(useLocalTiles?"Using local tiles.":"Using web tiles."));
     
@@ -142,8 +143,8 @@ OLMap.init = function(options) {
 };
 
 function fixMapSize() {
-    $("#map").width(window.innerWidth - 2);
-    $("#map").height(window.innerHeight - 2);
+    if (this.fullwidth) $("#map").width(window.innerWidth - 2);
+    if (this.fullheight) $("#map").height(window.innerHeight - 2);
 }
 
 OLMap.get_my_url = function(bounds) {  
